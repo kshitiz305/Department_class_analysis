@@ -1,19 +1,21 @@
 #!/usr/bin/env python
 # coding: utf-8
-#!/usr/bin/env python
+# !/usr/bin/env python
 # coding: utf-8
-#!/bin/bash-- user commands
+# !/bin/bash-- user commands
 
+import warnings
+
+import numpy as np
 # 26 181 53, 71,101, 133, 155, 177
-#!/usr/bin/env python
+# !/usr/bin/env python
 # coding: utf-8
 # First, import the required libraries
-import sys
 import pandas as pd
-import numpy as np
-import warnings
+
 warnings.simplefilter("ignore", category=UserWarning)
 warnings.filterwarnings("ignore")
+
 
 # Define a function for checking whether a pair of values meet certain criteria
 def is_qurt(pair: tuple) -> bool:
@@ -26,13 +28,23 @@ def is_qurt(pair: tuple) -> bool:
     return False
 
 
-def add_column(department_df,df):
-    mapping_dict = df[
-        ['Select your College and Department from the lists below.', 'Level 2']].drop_duplicates().dropna().set_index(
-        'Level 2').to_dict()
-    departmentdf.insert(0, "College", departmentdf.index.map(
-        mapping_dict['Select your College and Department from the lists below.']))
-    return department_df
+def add_column(department_df: pd.DataFrame, df: pd.DataFrame) -> pd.DataFrame:
+    '''function to select the columns from the main excel and convert the same to a dict and drop the duplicates are
+    dropped to create a unique keys from the datafarme and using that the index the dictionary is created
+    @:param department_df datafarme with the end result
+    @:param df Dataframe with the calculations
+    @:return new formulated dataframe'''
+    try:
+        mapping_dict = df[
+            ['Select your College and Department from the lists below.',
+             'Level 2']].drop_duplicates().dropna().set_index(
+            'Level 2').to_dict()
+        departmentdf.insert(0, "College", departmentdf.index.map(
+            mapping_dict['Select your College and Department from the lists below.']))
+    except Exception as exe:
+        print(exe)
+    finally:
+        return department_df
 
 
 if __name__ == "__main__":
@@ -43,7 +55,7 @@ if __name__ == "__main__":
     df = pd.read_excel('new2022-23.xlsx', sheet_name="Raw Data", header=0)
     question_col_start = int(26)
     question_col_end = int(181)
-    question_col_skip = np.array([53, 71,101, 133, 155], dtype=int)
+    question_col_skip = np.array([53, 71, 101, 133, 155], dtype=int)
     question_col = np.arange(question_col_start, question_col_end)
     question_col = np.setdiff1d(question_col, question_col_skip)
 
@@ -53,13 +65,12 @@ if __name__ == "__main__":
     # We also need the questions of interest
     df_questions_long_header = df.iloc[1:, question_col]
     # Extract individual question values and combine them
-    df_questions = pd.DataFrame(columns=np.arange(len(df_questions_long_header.columns)/2, dtype=int))
+    df_questions = pd.DataFrame(columns=np.arange(len(df_questions_long_header.columns) / 2, dtype=int))
     for num in range(int(len(df_questions.columns))):
-        df_questions.iloc[:, num] = df_questions_long_header.iloc[:, 2*num:2*num+2].dropna().agg(tuple, axis=1)
+        df_questions.iloc[:, num] = df_questions_long_header.iloc[:, 2 * num:2 * num + 2].dropna().agg(tuple, axis=1)
     # Combine fields and questions data
     df_all = pd.concat([df_fields, df_questions], axis=1, join="inner")
     total_answers = len(df_all)
-
 
     # Count answers for each department and college
     # Group the data by department and count the number of responses
@@ -67,25 +78,25 @@ if __name__ == "__main__":
     # Group the data by college and department and count the number of responses
     collegecount = df_all.groupby("Select your College and Department from the lists below.").count().iloc[:, :1]
 
-
     # Create a list of dataframes, one for each question pair
     questions = []
     for col in df_all.columns[len(df_fields.columns):]:
-        df_q = df_all.groupby(["Select your College and Department from the lists below.", "Level 2", col], as_index=False).count().iloc[:, :len(df_fields.columns)+2]
+        df_q = df_all.groupby(["Select your College and Department from the lists below.", "Level 2", col],
+                              as_index=False).count().iloc[:, :len(df_fields.columns) + 2]
         # Apply the "is_qurt" function to check if a pair of values meets certain criteria
         accept = df_q.iloc[:, -2].apply(is_qurt)
         questions += [df_q[accept]]
 
-
     # Calculate percentages of positive answers for each question
     question_names = []
-    for i in range(len(df_questions_long_header.columns)//2):
+    for i in range(len(df_questions_long_header.columns) // 2):
         # Extract the name of each question from the long header
-        question_names += [list(df_questions_long_header.columns)[2*i].replace(" Importance[Unimportant,Very Important]", "")]
+        question_names += [
+            list(df_questions_long_header.columns)[2 * i].replace(" Importance[Unimportant,Very Important]", "")]
     percentages = []
     for i in range(len(questions)):
         # Calculate the percentage of positive answers for each question
-        percentages += [f"{np.sum(questions[i].iloc[:, -1])/total_answers*100:.2f}%"]
+        percentages += [f"{np.sum(questions[i].iloc[:, -1]) / total_answers * 100:.2f}%"]
     percentages_df = pd.DataFrame(percentages, index=question_names, columns=["percentage"])
     percentages_df.to_csv("bRANDON_overall_percentage.csv")
 
@@ -100,9 +111,9 @@ if __name__ == "__main__":
 
     # Create a blank dataframe to be filled with percentages for each college-questions
     departmentdf = pd.DataFrame(None, index=np.unique(list(df_all["Level 2"])),
-                             columns=["Departments"] + question_names)
+                                columns=["Departments"] + question_names)
 
-    #Iterate over each question and calculate percentages for each college and department
+    # Iterate over each question and calculate percentages for each college and department
 
     for i in range(len(questions)):
         # Group the data by college and count the number of accepted responses for each question
@@ -135,22 +146,13 @@ if __name__ == "__main__":
         departmentpercentages[departmentjoincount.iloc[:, i + 2] == 0] = 0
         departmentdf.update(departmentpercentages.rename(question_names[i]))
 
-    #Write the calculated percentages for each college and department to a csv file
+    # Write the calculated percentages for each college and department to a csv file
 
     collegedf.to_csv("999_percentagesforColleges.csv")
     departmentdf.to_csv("999_percentagesforDepartments.csv")
 
-    departmentdf = add_column(departmentdf,df)
+    departmentdf = add_column(departmentdf, df)
     departmentdf.to_csv("Mapped_csv.csv")
 
     print(collegedf.to_csv)
     print(departmentdf.to_csv)
-
-
-
-
-
-
-
-
-
